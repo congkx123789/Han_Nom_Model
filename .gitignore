@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Data, Models, and Outputs
+checkpoints/
+data/
+dataset/
+models/
+output/
+runs/
+samples_test/
+unsloth_compiled_cache/
+*.pt
+*.pth
+*.prc
+*.ttf
+
+# Logs and Debug files
+*.log
+inference_log.txt
+missing_chars.txt
+sample_inference_results.txt
+scrape_from_file_log.txt
+scrape_log.txt
+rotated_debug.jpg
+test_font_render.png
+
+# OS
+.DS_Store
+Thumbs.db
