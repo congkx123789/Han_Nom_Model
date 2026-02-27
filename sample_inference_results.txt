@@ -1,0 +1,120 @@
+--- data/raw/images/1321_001.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+此為觀音像士渚事都事都
+==============================
+
+
+--- data/raw/images/1321_002.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+處世如空清明
+==============================
+
+
+--- data/raw/images/1321_003.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+哭
+==============================
+
+
+--- data/raw/images/1321_004.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+悉吳吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士連吳士
+==============================
+
+
+--- data/raw/images/1321_005.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+白过現相神經債
+==============================
+
+
+--- data/raw/images/1321_006.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+真太上神應使命如律令渚
+==============================
+
+
+--- data/raw/images/1321_007.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+悉壑
+==============================
+
+
+--- data/raw/images/1321_008.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+智慧菊菊菊
+==============================
+
+
+--- data/raw/images/1321_009.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+悉吳一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇一篇
+==============================
+
+
+--- data/raw/images/1321_010.jpg ---
+Original embedding size: torch.Size([151936, 2048])
+Resized embedding size: torch.Size([171663, 2048])
+Generating OCR result...
+
+==============================
+OCR Result:
+------------------------------
+西天國 this
+==============================
+
+
