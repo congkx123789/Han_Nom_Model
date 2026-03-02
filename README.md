@@ -5,6 +5,25 @@ This repository contains a full machine learning pipeline for recognizing, proce
 ## 🚀 Quick Starts
 - If you are looking to get started immediately with our **Qwen2.5-VL-3B** model for Han-Nom Document Understanding, please see the [**Qwen Quickstart Guide**](QUICKSTART.md).
 
+## 🗄️ Dataset
+The complete raw and processed Han-Nom dataset used in this project is hosted on Hugging Face:
+👉 **[Cong123779/Han_Nom_Dataset](https://huggingface.co/datasets/Cong123779/Han_Nom_Dataset)**
+
+### Where the data comes from
+The dataset is primarily composed of:
+1. **Nom Foundation (chunom.org)**: A massive source of digitized Luc Bat poetry, historical texts, and dictionaries from the Vietnamese Nom Preservation Foundation.
+2. **Tu Dien Han Viet (Thieu Chuu)**: Textual and character structure data processed from standard Han-Viet historical dictionaries.
+3. **KanjiVG / NomNaOCR**: Stroke-order and character visualization data utilized for generating massive synthetic text corpora for the models to pre-train on. 
+
+### How to use the Data
+To download the dataset locally into your project, you can use the HuggingFace CLI or Python library:
+```python
+from huggingface_hub import snapshot_download
+
+# This will download the dataset to your local `data/` directory
+snapshot_download(repo_id="Cong123779/Han_Nom_Dataset", repo_type="dataset", local_dir="./data")
+```
+
 ---
 
 ## 🏗️ Architecture & Pipeline
