@@ -32,18 +32,18 @@ The pipeline is designed to handle the complexities of historical texts, includi
 
 1. **Text Detection & Cropping (YOLOv8 & YOLO11)** 
    Detects characters or columns of text in a source document.
-   - `scripts/train_yolo.py`: Train custom YOLO detection models.
-   - `scripts/batch_yolo_inference.py`: Run batch detection on documents.
+   - `scripts/training/train_yolo.py`: Train custom YOLO detection models.
+   - `scripts/inference/batch_yolo_inference.py`: Run batch detection on documents.
 
 2. **Optical Character Recognition (TrOCR)**
    Specialized Transformer models fine-tuned to read cropped Han-Nom images.
-   - `scripts/finetune_trocr.py`: Fine-tune TrOCR models for Han-Nom.
-   - `scripts/predict_trocr.py`: Run OCR inference on character images.
+   - `scripts/training/finetune_trocr.py`: Fine-tune TrOCR models for Han-Nom.
+   - `scripts/inference/predict_trocr.py`: Run OCR inference on character images.
 
 3. **End-to-End Vision-Language Modeling (Qwen2.5-VL)**
    Heavyweight VLM used for reading complex crops, translating, and document understanding.
-   - `scripts/finetune_qwen.py`: LoRA fine-tuning for Qwen2.5-VL.
-   - `scripts/yolo_qwen_pipeline.py`: The complete end-to-end pipeline (YOLO Detection -> Crop -> Qwen2.5-VL OCR).
+   - `scripts/training/finetune_qwen.py`: LoRA fine-tuning for Qwen2.5-VL.
+   - `scripts/inference/yolo_qwen_pipeline.py`: The complete end-to-end pipeline (YOLO Detection -> Crop -> Qwen2.5-VL OCR).
 
 ---
 
@@ -52,12 +52,12 @@ The pipeline is designed to handle the complexities of historical texts, includi
 Training historical OCR models requires massive amounts of data. This project includes extensive tooling for data harvesting and generation:
 
 - **Synthetic Data Generation**: 
-  - `scripts/generate_synthetic_nom.py`: Generate synthetic training images using `.ttf` fonts like `NomNaTong-Regular.ttf`.
-  - `scripts/generate_images.py`: Image augmentation and generation.
+  - `scripts/data_prep/generate_synthetic_nom.py`: Generate synthetic training images using `.ttf` fonts.
+  - `scripts/data_prep/generate_images.py`: Image augmentation and generation.
 - **Scraping Tools**: 
-  - `scripts/scrape_nom_foundation.py` / `scripts/scrape_kieu_1902.py`: Tools to harvest raw data from online Han-Nom archives.
+  - `scripts/data_prep/scrape_nom_foundation.py` / `scripts/data_prep/scrape_kieu_1902.py`: Tools to harvest raw data.
 - **Han-Viet Dictionaries**:
-  - `scripts/parse_unihan.py`, `scripts/hanviet_utils.py`, `scripts/convert_prc_to_csv.py`: Utilities to process structural Han-Viet lookup dictionaries (`hanviet.csv`).
+  - `scripts/tools/parse_unihan.py`, `scripts/tools/hanviet_utils.py`, `scripts/data_prep/convert_prc_to_csv.py`: Utilities to process structural Han-Viet lookup dictionaries.
 
 ---
 
@@ -65,16 +65,16 @@ Training historical OCR models requires massive amounts of data. This project in
 
 ```text
 Han_Nom_Model/
+├── assets/                  # Fonts, dictionaries, and test images
 ├── checkpoints/             # Model training checkpoints
-├── data/                    # Processed datasets and labels
-├── dataset/                 # Raw image datasets for training/testing
-├── docs/                    # Additional documentation and guides
-├── fonts/                   # TTF fonts used for synthetic generation
-├── models/                  # Base downloaded models (Qwen, TrOCR)
+├── data/                    # Project data (raw, processed, metadata)
+├── models/                  # Base models and standalone weights
 ├── output/                  # Final outputs, logs, and adapter weights
-├── runs/                    # YOLO training runs and detection results
-├── samples_test/            # Test images for quick inference
-└── scripts/                 # Core Python scripts (training, scraping, utils)
+└── scripts/                 # Organized Python/Shell scripts
+    ├── data_prep/           # Scraping and generation
+    ├── training/            # Fine-tuning and training
+    ├── inference/           # Prediction and evaluation
+    └── tools/               # Utilities and analysis
 ```
 
 ---

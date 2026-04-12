@@ -16,6 +16,12 @@ venv.bak/
 checkpoints/
 data/
 models/
+*.db
+*.sqlite
+*.pth
+*.pt
+*.prc
+*.ttf
 
 # System Caches & Giant Logs
 unsloth_compiled_cache/
@@ -26,3 +32,4 @@ inference_log.txt
 # OS
 .DS_Store
 Thumbs.db
+.promt_process_made_web.txt

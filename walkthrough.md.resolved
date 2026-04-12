@@ -1,0 +1,84 @@
+# Project Cleanup Walkthrough
+
+I have completed the initial cleanup of the Hán-Nôm project. This has removed several gigabytes of logs, caches, and redundant data.
+
+## Architecture Walkthrough Diagram
+Đây là biểu đồ quy trình hoạt động của hệ thống Hán-Nôm Heritage Platform:
+
+```mermaid
+graph TD
+    subgraph "🌐 Client Layer"
+        User["Researcher (Browser)"]
+    end
+
+    subgraph "🛡️ Proxy Layer (Nginx)"
+        Proxy["Nginx (hannom.lyvuha.com)"]
+    end
+
+    subgraph "🎨 Frontend Layer (Vite/React)"
+        Web["Heritage UI (Port 3000)"]
+    end
+
+    subgraph "⚙️ Backend API Layer (FastAPI)"
+        API["FastAPI Core (Port 8000)"]
+        OCR["OCR Service (YOLO + Qwen2.5)"]
+        RAG["RAG Service (LangChain)"]
+    end
+
+    subgraph "📂 Data & AI Storage"
+        MinIO["MinIO (High-res Images)"]
+        Postgres["PostgreSQL (Metadata)"]
+        Redis["Redis (Cache)"]
+        Milvus["Milvus (Vector Vectors)"]
+    end
+
+    User -->|Access| Proxy
+    Proxy -->|Root Path /| Web
+    Proxy -->|API Path /api/| API
+    
+    Web -->|Upload Scan| API
+    API -->|Save Raw| MinIO
+    API -->|Trigger| OCR
+    OCR -->|Extract Text| Postgres
+    
+    API -->|Query context| RAG
+    RAG -->|Semantic Search| Milvus
+    API -->|Fast Cache| Redis
+```
+
+## Actions Completed
+
+### 1. Reclaimed Disk Space
+- **~14.2GB Reclaimed Total:** Removed 12.6GB of visualizations from [data/](file:///home/alida/Documents/Cursor/Han_Nom_Model/backend/app/models/document.py#20-40) and over 1.5GB of old model versions/logs.
+- **Caches Cleared:** Removed `unsloth_compiled_cache/` and Tensorboard `runs/`.
+
+### 2. Smarter Project Structure
+I have reorganized the project into a modular hierarchy to make it easier to manage:
+- **`scripts/`**: Now organized into `data_prep/`, `training/`, `inference/`, and `tools/`.
+- **`assets/`**: Consolidates fonts, dictionaries, and test images.
+- **`data/metadata/`**: Stores reference CSVs and analysis results.
+- **`models/`**: Centralized location for model weights and architecture code.
+
+### 3. Documentation Update
+- **Comprehensive READMEs**: Created README files for all major directories (`scripts/`, `data/`, `assets/`, `models/`, `checkpoints/`) to explain their contents and roles in the pipeline.
+- Updated root [README.md](file:///home/alida/Documents/Cursor/Han_Nom_Model/README.md) with the new directory map and updated script paths.
+
+### 4. Heritage Platform "First Setup"
+I have initialized the full-stack architecture described in your prompt document:
+- **Infrastructure Layer**: [docker-compose.yml](file:///home/alida/Documents/Cursor/Han_Nom_Model/docker-compose.yml) provides PostgreSQL, MinIO, Redis, and Milvus.
+- **Backend (FastAPI)**: Modular API architecture in `backend/` ready for OCR and Dictionary integration.
+- **Frontend (React/Vite)**: A premium, dark-themed UI in `frontend/` powered by Tailwind CSS, Framer Motion, and Lucide React.
+- **Initialization**: Created a [setup.sh](file:///home/alida/Documents/Cursor/Han_Nom_Model/setup.sh) script to streamline the installation of all dependencies.
+
+### 5. Custom Domain & Reverse Proxy
+The platform is now optimized for use with your custom domain **`hannom.lyvuha.com`**:
+- **Nginx Reverse Proxy**: Automatically routes `/api/` traffic to the backend and all other traffic to the frontend.
+- **CORS Configuration**: Backend is securely configured to allow cross-origin requests from your production domain.
+- **Dynamic API Routing**: Frontend uses relative paths to ensure seamless communication regardless of the environment.
+
+## Reclaimed Space Summary
+- **Total Reclaimed: 14.2 GB**
+- **Kept: 17 GB `raw` data** as requested.
+
+## Cleanup Log
+For a detailed list of every file removed, please see the [cleanup_log.md](file:///home/alida/.gemini/antigravity/brain/7f433caf-9527-4d86-aec3-432661b4cb19/cleanup_log.md).

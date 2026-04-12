@@ -1,0 +1,5 @@
+torch
+transformers
+ultralytics
+opencv-python-headless
+paddleocr
