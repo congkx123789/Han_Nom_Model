@@ -1,106 +1,112 @@
-# Han-Nom OCR & Document Understanding Pipeline
+# Nền tảng Di sản Số Hán-Nôm Thông minh (Agentic Hán-Nôm Heritage Platform)
 
-This repository contains a full machine learning pipeline for recognizing, processing, and understanding **Han-Nom** (ancient Vietnamese script) texts. It combines object detection (YOLO), Transformer-based OCR (TrOCR), and modern Vision-Language Models (Qwen2.5-VL) to digitize and translate historical documents.
+![Trạng thái](https://img.shields.io/badge/Status-Hoàn_thiện_Giai_đoạn_2-brightgreen)
+![Công nghệ](https://img.shields.io/badge/Tech-FastAPI_|_React_|_Milvus_|_Qwen2.5--VL-blue)
+![Môi trường](https://img.shields.io/badge/Inference-Local_100%25-orange)
 
-## 🚀 Quick Starts
-- If you are looking to get started immediately with our **Qwen2.5-VL-3B** model for Han-Nom Document Understanding, please see the [**Qwen Quickstart Guide**](QUICKSTART.md).
+Dự án **Hán-Nôm Heritage** là một hệ sinh thái AI toàn diện chuyên biệt cho di sản văn hóa Việt Nam. Hệ thống chuyển đổi mã nguồn từ các mô hình nhận dạng đơn thuần thành một **Agent thông minh** có khả năng tra cứu, hiểu và bảo tồn thư tịch cổ (Hán Nôm, Bia đá, Mộc bản) với độ chính xác học thuật cao.
 
-## 🗄️ Dataset
-The complete raw and processed Han-Nom dataset used in this project is hosted on Hugging Face:
-👉 **[Cong123779/Han_Nom_Dataset](https://huggingface.co/datasets/Cong123779/Han_Nom_Dataset)**
+---
 
-### Where the data comes from
-The dataset is primarily composed of:
-1. **Nom Foundation (chunom.org)**: A massive source of digitized Luc Bat poetry, historical texts, and dictionaries from the Vietnamese Nom Preservation Foundation.
-2. **Tu Dien Han Viet (Thieu Chuu)**: Textual and character structure data processed from standard Han-Viet historical dictionaries.
-3. **KanjiVG / NomNaOCR**: Stroke-order and character visualization data utilized for generating massive synthetic text corpora for the models to pre-train on. 
+## 🏗️ Kiến trúc Tổng thể (System Architecture)
 
-### How to use the Data
-To download the dataset locally into your project, you can use the HuggingFace CLI or Python library:
-```python
-from huggingface_hub import snapshot_download
+Dưới đây là sơ đồ kết nối luồng dữ liệu từ giao diện người dùng đến các mô hình AI chạy cục bộ:
 
-# This will download the dataset to your local `data/` directory
-snapshot_download(repo_id="Cong123779/Han_Nom_Dataset", repo_type="dataset", local_dir="./data")
+```mermaid
+graph TD
+    User((Khách / Học giả)) <--> Frontend[React Vite UI]
+    Frontend <--> Backend[FastAPI Server]
+    
+    subgraph AI_Engine [Hệ thống Trí tuệ Nhân tạo]
+        Backend --> Intent[Bộ phân loại Ý định - Intent Classifier]
+        Intent -->|Dịch/Bóc tách| OCR_Pipeline[OCR Pipeline]
+        Intent -->|Tra cứu| RAG[RAG Retrieval]
+        
+        subgraph OCR_Pipeline
+            YOLO[Model Phát hiện - YOLO] -->|Cắt vùng chữ| Crop[Crop Tool]
+            Crop --> Qwen[Model Nhận dạng - Qwen2.5-VL]
+        end
+        
+        subgraph Knowledge_Base
+            RAG -->|Embedding| BGE[BGE-M3]
+            BGE <--> Milvus[(Milvus Vector DB)]
+        end
+    end
+    
+    Backend --> DB[(PostgreSQL - Profiles)]
 ```
 
 ---
 
-## 🏗️ Architecture & Pipeline
+## 🏛️ Lớp Cốt lõi (Core Layers)
 
-The pipeline is designed to handle the complexities of historical texts, including vertical writing layouts, degraded document quality, and complex character sets.
+Hệ thống được xây dựng trên mô hình 3 lớp cốt lõi nhằm giải quyết bài toán "Ảo tưởng" (Hallucination) của AI:
 
-1. **Text Detection & Cropping (YOLOv8 & YOLO11)** 
-   Detects characters or columns of text in a source document.
-   - `scripts/training/train_yolo.py`: Train custom YOLO detection models.
-   - `scripts/inference/batch_yolo_inference.py`: Run batch detection on documents.
+### 1. Lớp Trí tuệ (AI Engine & RAG)
+- **Qwen 2.5-VL (Vision-Language):** Mô hình đa phương thức chạy cục bộ trên GPU (RTX 5060 Ti), bóc tách trực tiếp văn bản từ ảnh scan cổ.
+- **BGE-M3 Embeddings:** Mã hóa 58,000 mục dữ liệu di sản (Từ điển, văn bia).
+- **Milvus Vector DB:** Lưu trữ và truy xuất ngữ nghĩa với độ trễ cực thấp (<100ms).
 
-2. **Optical Character Recognition (TrOCR)**
-   Specialized Transformer models fine-tuned to read cropped Han-Nom images.
-   - `scripts/training/finetune_trocr.py`: Fine-tune TrOCR models for Han-Nom.
-   - `scripts/inference/predict_trocr.py`: Run OCR inference on character images.
+### 2. Lớp An toàn "Vòng Kim Cô" (Safety Guardrails)
+- **Kiểm soát Tham số:** Khóa `temperature=0.01` để đảm bảo câu trả lời nhất quán.
+- **Hệ thống Lọc 3 Lớp:** Chặn từ khóa phi học thuật, xử lý lỗi anachronism (sai niên đại), và ngưỡng tự tin (Confidence Threshold > 0.45).
 
-3. **End-to-End Vision-Language Modeling (Qwen2.5-VL)**
-   Heavyweight VLM used for reading complex crops, translating, and document understanding.
-   - `scripts/training/finetune_qwen.py`: LoRA fine-tuning for Qwen2.5-VL.
-   - `scripts/inference/yolo_qwen_pipeline.py`: The complete end-to-end pipeline (YOLO Detection -> Crop -> Qwen2.5-VL OCR).
+### 3. Cá nhân hóa (Agentic SOA)
+- **Hồ sơ nghiên cứu:** Lưu trữ lịch sử và chuyên môn của học giả để điều chỉnh câu trả lời.
 
 ---
 
-## 🛠️ Data Preparation & Synthetic Generation
+## 🔍 Quy trình OCR & Bóc tách Văn bản (The Process)
 
-Training historical OCR models requires massive amounts of data. This project includes extensive tooling for data harvesting and generation:
+Quy trình bóc tách từ một tấm ảnh scan di sản sang văn bản số hóa (Chữ Nôm) diễn ra qua 4 giai đoạn:
 
-- **Synthetic Data Generation**: 
-  - `scripts/data_prep/generate_synthetic_nom.py`: Generate synthetic training images using `.ttf` fonts.
-  - `scripts/data_prep/generate_images.py`: Image augmentation and generation.
-- **Scraping Tools**: 
-  - `scripts/data_prep/scrape_nom_foundation.py` / `scripts/data_prep/scrape_kieu_1902.py`: Tools to harvest raw data.
-- **Han-Viet Dictionaries**:
-  - `scripts/tools/parse_unihan.py`, `scripts/tools/hanviet_utils.py`, `scripts/data_prep/convert_prc_to_csv.py`: Utilities to process structural Han-Viet lookup dictionaries.
+### Bước 1: Phát hiện Vùng văn bản (Text Detection)
+Sử dụng **YOLO (v8/11)** được huấn luyện đặc biệt trên bộ dữ liệu di sản để xác định tọa độ các cột chữ hoặc chữ đơn. Điều này giúp hệ thống bỏ qua các nhiễu từ nền giấy hoặc hoa văn trang trí.
+
+### Bước 2: Cắt & Tiền xử lý (Cropping)
+Các vùng chữ được bóc tách và chuẩn hóa. Hệ thống tự động nhận diện hướng viết (Dọc/Ngang) để xoay ảnh về góc nhìn tối ưu cho mô hình nhận dạng.
+
+### Bước 3: Nhận dạng Chữ (Recognition)
+Mô hình **Qwen 2.5-VL** (được tinh chỉnh qua LoRA) tiếp nhận các vùng ảnh cắt. Thay vì đọc tuần tự đơn thuần, mô hình hiểu được cấu trúc nét vẽ của chữ Nôm và chữ Hán cổ để xuất ra chuỗi ký tự text chính xác.
+
+### Bước 4: Đối soát & Hiệu đính (RAG Correction)
+Chuỗi text thô sau OCR được đưa vào lớp RAG:
+- So khớp với từ điển Thiều Chửu/Hán Việt để sửa các lỗi nhận diện sai.
+- Gán âm Hán Việt và định nghĩa ngữ cảnh cho từng chữ.
 
 ---
 
-## 📂 Directory Structure
+## 📂 Giao diện Đa chế độ (Hybrid UX)
+
+Dự án cung cấp hai không gian làm việc tách biệt:
+- **Hành lang Di sản (Public Portal):** Cho công chúng khám phá di sản một cách trực quan.
+- **Không gian Nghiên cứu (Researcher Workspace):** Cho học giả bóc tách dữ liệu, quản lý Delta Lake và giám sát hạ tầng GPU.
+
+---
+
+## 🛠️ Cấu trúc Thư mục & GitHub Readiness
+
+Để triển khai dự án lên GitHub, cấu trúc được tổ chức như sau:
 
 ```text
-Han_Nom_Model/
-├── assets/                  # Fonts, dictionaries, and test images
-├── checkpoints/             # Model training checkpoints
-├── data/                    # Project data (raw, processed, metadata)
-├── models/                  # Base models and standalone weights
-├── output/                  # Final outputs, logs, and adapter weights
-└── scripts/                 # Organized Python/Shell scripts
-    ├── data_prep/           # Scraping and generation
-    ├── training/            # Fine-tuning and training
-    ├── inference/           # Prediction and evaluation
-    └── tools/               # Utilities and analysis
+.
+├── backend/            # FastAPI Server & AI Execution
+├── frontend/           # React App (Vite)
+├── scripts/            # Inference & Data Pipeline
+│   ├── training/       # Scripts huấn luyện Model (YOLO, Qwen)
+│   └── inference/      # Scripts bóc tách (yolo_qwen_pipeline.py)
+├── models/             # Chứa Model weights (local)
+└── data/               # Metadata và Database files
 ```
 
 ---
 
-## 💻 Installation
+## 📥 Hướng dẫn Cài đặt & Chạy
+*(Xem chi tiết trong phần hướng dẫn cài đặt ở phiên bản trước hoặc file INSTALL.md)*
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/congkx123789/Han_Nom_Model.git
-   cd Han_Nom_Model
-   ```
-
-2. **Install PyTorch:**
-   Ensure you have a GPU-enabled version of PyTorch installed for your system constraints.
-   ```bash
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-   ```
-
-3. **Install Dependencies:**
-   Install required libraries for Ultralytics (YOLO), HuggingFace Transformers, PEFT, and Qwen-VL.
-   ```bash
-   pip install ultralytics transformers accelerate peft qwen-vl-utils pillow tqdm bs4 rapidfuzz
-   ```
-   *(For 4-bit quantization, you must also install `bitsandbytes`)*
+1. Khởi động **Milvus DB** qua Docker.
+2. Chạy **Backend FastAPI** tại `backend/app/main.py`.
+3. Chạy **Frontend React** tại `frontend/`.
 
 ---
-
-## 📝 License
-This project is open-source. Datasets and models downloaded via scripts may be subject to their original curators' licenses.
+*Hán-Nôm Heritage - Bảo tồn tinh hoa Việt qua sức mạnh của Trí tuệ Nhân tạo.*
