@@ -10,103 +10,107 @@ Dự án **Hán-Nôm Heritage** là một hệ sinh thái AI toàn diện chuyê
 
 ## 🏗️ Kiến trúc Tổng thể (System Architecture)
 
-Dưới đây là sơ đồ kết nối luồng dữ liệu từ giao diện người dùng đến các mô hình AI chạy cục bộ:
+Hệ thống được thiết kế theo mô hình **Service-Oriented Architecture (SOA)**, tách biệt rõ ràng giữa các dịch vụ xử lý AI nặng và giao diện người dùng thời gian thực.
 
 ```mermaid
 graph TD
-    User((Khách / Học giả)) <--> Frontend[React Vite UI]
-    Frontend <--> Backend[FastAPI Server]
+    User((Khách / Học giả)) <-- JSON/REST --> Frontend[React Vite UI]
+    Frontend <-- WebSocket/REST --> Backend[FastAPI Orchestrator]
     
-    subgraph AI_Engine [Hệ thống Trí tuệ Nhân tạo]
-        Backend --> Intent[Bộ phân loại Ý định - Intent Classifier]
-        Intent -->|Dịch/Bóc tách| OCR_Pipeline[OCR Pipeline]
-        Intent -->|Tra cứu| RAG[RAG Retrieval]
+    subgraph AI_Cluster [AI High-Performance Cluster]
+        Backend --> Intent[Intent Classifier]
+        Intent -->|OCR Task| YOLO[YOLOv11 Detection]
+        YOLO -->|Crops| Qwen[Qwen2.5-VL Recognition]
         
-        subgraph OCR_Pipeline
-            YOLO[Model Phát hiện - YOLO] -->|Cắt vùng chữ| Crop[Crop Tool]
-            Crop --> Qwen[Model Nhận dạng - Qwen2.5-VL]
-        end
-        
-        subgraph Knowledge_Base
-            RAG -->|Embedding| BGE[BGE-M3]
-            BGE <--> Milvus[(Milvus Vector DB)]
-        end
+        Backend -->|Query| RAG[Agentic RAG Service]
+        RAG -->|Semantic Search| Milvus[(Milvus Vector DB)]
+        RAG -->|Personal Context| Postgres[(PostgreSQL - Profiles)]
     end
     
-    Backend --> DB[(PostgreSQL - Profiles)]
+    subgraph Storage_Layer [Storage & Data Lake]
+        Backend <--> MinIO[MinIO Object Storage]
+        Backend <--> Kafka[Apache Kafka - Event Streaming]
+    end
 ```
 
 ---
 
-## 🏛️ Lớp Cốt lõi (Core Layers)
+## 🛠️ Hệ thống Công nghệ & Hạ tầng (Infrastructure Stack)
 
-Hệ thống được xây dựng trên mô hình 3 lớp cốt lõi nhằm giải quyết bài toán "Ảo tưởng" (Hallucination) của AI:
+Dự án sử dụng các công nghệ tiên tiến nhất để đảm bảo hiệu suất đào tạo và tốc độ phản hồi tính bằng mili giây.
 
-### 1. Lớp Trí tuệ (AI Engine & RAG)
-- **Qwen 2.5-VL (Vision-Language):** Mô hình đa phương thức chạy cục bộ trên GPU (RTX 5060 Ti), bóc tách trực tiếp văn bản từ ảnh scan cổ.
-- **BGE-M3 Embeddings:** Mã hóa 58,000 mục dữ liệu di sản (Từ điển, văn bia).
-- **Milvus Vector DB:** Lưu trữ và truy xuất ngữ nghĩa với độ trễ cực thấp (<100ms).
+### 1. Frontend: Scholar & Client Experience
+- **Logic:** React 18 (Hooks, Context API) + Vite.
+- **UI/UX:** 
+    - **Vanilla CSS:** Hệ thống Design System tùy chỉnh, tối ưu hóa CSS Variables cho Dark/Light mode.
+    - **Framer Motion:** Hiệu ứng chuyển cảnh (transitions) và micro-interactions mượt mà.
+    - **Lucide-React:** Bộ thư viện icon phong cách scholarly.
+- **Performance:** Code-splitting và Lazy loading cho các module nghiên cứu nặng.
 
-### 2. Lớp An toàn "Vòng Kim Cô" (Safety Guardrails)
-- **Kiểm soát Tham số:** Khóa `temperature=0.01` để đảm bảo câu trả lời nhất quán.
-- **Hệ thống Lọc 3 Lớp:** Chặn từ khóa phi học thuật, xử lý lỗi anachronism (sai niên đại), và ngưỡng tự tin (Confidence Threshold > 0.45).
+### 2. Backend & MLOps: Agentic Orchestration
+- **FastAPI:** Hiệu suất cao với hỗ trợ Python AsyncIO, đảm bảo xử lý đồng thời hàng trăm yêu cầu RAG.
+- **LangChain & Agentic Workflow:** Điều phối các "Tool" của Agent, cho phép AI tự quyết định khi nào cần tra cứu ngữ nghĩa hoặc gọi mô hình nhận dạng.
+- **Infrastructure:**
+    - **PostgreSQL (SQLAlchemy 2.0):** Quản lý hồ sơ người dùng đa tầng và lịch sử nghiên cứu.
+    - **MinIO:** Lưu trữ Object Storage cho hàng trăm GB ảnh scan độ phân giải cao.
+    - **Apache Kafka:** Hệ thống luồng sự kiện (Event Streaming) để điều phối các tác vụ nhận dạng hàng loạt.
+    - **Docker Ecosystem:** Container hóa toàn bộ stack, đảm bảo tính nhất quán từ Development đến Production.
 
-### 3. Cá nhân hóa (Agentic SOA)
-- **Hồ sơ nghiên cứu:** Lưu trữ lịch sử và chuyên môn của học giả để điều chỉnh câu trả lời.
-
----
-
-## 🔍 Quy trình OCR & Bóc tách Văn bản (The Process)
-
-Quy trình bóc tách từ một tấm ảnh scan di sản sang văn bản số hóa (Chữ Nôm) diễn ra qua 4 giai đoạn:
-
-### Bước 1: Phát hiện Vùng văn bản (Text Detection)
-Sử dụng **YOLO (v8/11)** được huấn luyện đặc biệt trên bộ dữ liệu di sản để xác định tọa độ các cột chữ hoặc chữ đơn. Điều này giúp hệ thống bỏ qua các nhiễu từ nền giấy hoặc hoa văn trang trí.
-
-### Bước 2: Cắt & Tiền xử lý (Cropping)
-Các vùng chữ được bóc tách và chuẩn hóa. Hệ thống tự động nhận diện hướng viết (Dọc/Ngang) để xoay ảnh về góc nhìn tối ưu cho mô hình nhận dạng.
-
-### Bước 3: Nhận dạng Chữ (Recognition)
-Mô hình **Qwen 2.5-VL** (được tinh chỉnh qua LoRA) tiếp nhận các vùng ảnh cắt. Thay vì đọc tuần tự đơn thuần, mô hình hiểu được cấu trúc nét vẽ của chữ Nôm và chữ Hán cổ để xuất ra chuỗi ký tự text chính xác.
-
-### Bước 4: Đối soát & Hiệu đính (RAG Correction)
-Chuỗi text thô sau OCR được đưa vào lớp RAG:
-- So khớp với từ điển Thiều Chửu/Hán Việt để sửa các lỗi nhận diện sai.
-- Gán âm Hán Việt và định nghĩa ngữ cảnh cho từng chữ.
+### 3. AI Core & Model Optimization
+- **Computer Vision:** YOLOv8n/v11n (Đã được tinh chỉnh trên 114k nhãn di sản để đạt độ chính xác >98% trong việc phát hiện cột chữ).
+- **Vision-Language Model:** Qwen 2.5-VL 3B (LoRA Fine-tuned). Hỗ trợ bóc tách văn bản Hán Nôm theo chiều dọc và hiểu ngữ cảnh văn hóa.
+- **Retriever Engine:** BAAI/BGE-M3 Embeddings + Milvus Vector Database (Cấu hình HNSW index cho tốc độ tìm kiếm O(log N)).
+- **Inference Optimization:** 
+    - **Quantization:** Sử dụng bitsandbytes cho 4-bit inference.
+    - **Hardware Acceleration:** TensorRT/ONNX Runtime tích hợp sâu trên NVIDIA RTX 5060 Ti.
 
 ---
 
-## 📂 Giao diện Đa chế độ (Hybrid UX)
+## 📂 Quy trình Bóc tách & Số hóa (The Pipeline)
 
-Dự án cung cấp hai không gian làm việc tách biệt:
-- **Hành lang Di sản (Public Portal):** Cho công chúng khám phá di sản một cách trực quan.
-- **Không gian Nghiên cứu (Researcher Workspace):** Cho học giả bóc tách dữ liệu, quản lý Delta Lake và giám sát hạ tầng GPU.
+### Bước 1: Phát hiện & Phân vùng (YOLO Segmentation)
+Xác định tọa độ vùng văn bản cổ, lọc bỏ nhiễu từ hoa văn, dấu ấn hoặc các vết ố hư hại trên mộc bản.
+
+### Bước 2: Nhận dạng Đa phương thức (Qwen VLM)
+Mô hình Vision-Language được "dạy" cách đọc chữ Nôm theo phong cách thư pháp. Khác với OCR truyền thống, Qwen hiểu được cấu trúc "Biểu luận" của chữ Nôm để bóc tách chính xác ngay cả khi nét chữ bị mờ.
+
+### Bước 3: Đối soát RAG & Hiệu đính (Semantic Refinement)
+Kết quả thô được đưa vào **RAG Pipeline**:
+- Truy vấn Milvus để tìm âm Hán Việt chuẩn xác từ từ điển Thiều Chửu.
+- Sửa lỗi chính tả dựa trên ngữ cảnh lịch sử của tác phẩm.
+
+### Bước 4: Chuyển đổi & Lưu trữ (Delta Lake)
+Dữ liệu cuối cùng được lưu trữ dưới dạng Delta Lake, hỗ trợ truy vấn nhanh và theo dõi lịch sử chỉnh sửa của các học giả.
 
 ---
 
-## 🛠️ Cấu trúc Thư mục & GitHub Readiness
-
-Để triển khai dự án lên GitHub, cấu trúc được tổ chức như sau:
+## 📂 Cấu trúc Thư mục (Granular Structure)
 
 ```text
-.
-├── backend/            # FastAPI Server & AI Execution
-├── frontend/           # React App (Vite)
-├── scripts/            # Inference & Data Pipeline
-│   ├── training/       # Scripts huấn luyện Model (YOLO, Qwen)
-│   └── inference/      # Scripts bóc tách (yolo_qwen_pipeline.py)
-├── models/             # Chứa Model weights (local)
-└── data/               # Metadata và Database files
+Han_Nom_Model/
+├── backend/            
+│   ├── app/
+│   │   ├── api/          # Endpoints: /chat, /auth, /profile, /analytics
+│   │   ├── services/     # rag_engine.py, personal_agent.py, guardrails.py
+│   │   └── core/         # Middleware an ninh, config GPU/Cuda
+│   ├── worker/           # Background tasks xử lý Kafka/Redis
+│   └── scripts/          # Ingestion pipelines cho Milvus & MinIO
+├── frontend/           
+│   ├── src/
+│   │   ├── views/        # Admin (Nghiên cứu) & Client (Khám phá)
+│   │   ├── components/   # common/ (AI Bubble, Navbar, Sidebar)
+│   │   └── assets/       # Heritage fonts & scholarly images
+│   └── index.css         # Hệ thống Design Tokens trung tâm
+├── models/               # Model weights (.pt, .pth, checkpoints)
+├── data/                 # Raw/Processed dataset (17GB)
+└── deploy/               # Docker Compose & K8s manifests
 ```
 
 ---
 
-## 📥 Hướng dẫn Cài đặt & Chạy
-*(Xem chi tiết trong phần hướng dẫn cài đặt ở phiên bản trước hoặc file INSTALL.md)*
-
-1. Khởi động **Milvus DB** qua Docker.
-2. Chạy **Backend FastAPI** tại `backend/app/main.py`.
-3. Chạy **Frontend React** tại `frontend/`.
+## 📜 Tài liệu Tham khảo
+- **Nguồn Dữ liệu chính:** [Cong123779/Han_Nom_Dataset](https://huggingface.co/datasets/Cong123779/Han_Nom_Dataset)
+- **Hạ tầng AI:** Qwen-VL, Milvus Vector DB, LangChain.
 
 ---
-*Hán-Nôm Heritage - Bảo tồn tinh hoa Việt qua sức mạnh của Trí tuệ Nhân tạo.*
+*Bảo tồn quá khứ - Kiến tạo tương lai bằng Trí tuệ Nhân tạo.*
