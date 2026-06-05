@@ -1,10 +1,13 @@
 # Nền tảng Di sản Số Hán-Nôm Thông minh (Agentic Hán-Nôm Heritage Platform)
 
-![Trạng thái](https://img.shields.io/badge/Status-Hoàn_thiện_Giai_đoạn_2-brightgreen)
-![Công nghệ](https://img.shields.io/badge/Tech-FastAPI_|_React_|_Milvus_|_Qwen2.5--VL-blue)
-![Môi trường](https://img.shields.io/badge/Inference-Local_100%25-orange)
+![Trạng thái](https://img.shields.io/badge/Status-Production_Ready-brightgreen)
+![Công nghệ](https://img.shields.io/badge/Tech-FastAPI_|_React_|_Milvus_|_Ollama-blue)
+![Môi trường](https://img.shields.io/badge/Inference-Local_GPU_100%25-orange)
+![GPU](https://img.shields.io/badge/GPU-NVIDIA_RTX_5060_Ti_16GB-76B900)
 
 Dự án **Hán-Nôm Heritage** là một hệ sinh thái AI toàn diện chuyên biệt cho di sản văn hóa Việt Nam. Hệ thống chuyển đổi mã nguồn từ các mô hình nhận dạng đơn thuần thành một **Agent thông minh** có khả năng tra cứu, hiểu và bảo tồn thư tịch cổ (Hán Nôm, Bia đá, Mộc bản) với độ chính xác học thuật cao.
+
+> **100% Local GPU Inference** — Không sử dụng Cloud API. Toàn bộ AI chạy trên NVIDIA RTX 5060 Ti thông qua Ollama.
 
 ---
 
@@ -14,22 +17,32 @@ Hệ thống được thiết kế theo mô hình **Service-Oriented Architectur
 
 ```mermaid
 graph TD
-    User((Khách / Học giả)) <-- JSON/REST --> Frontend[React Vite UI]
-    Frontend <-- WebSocket/REST --> Backend[FastAPI Orchestrator]
+    User((Khách / Học giả)) <-- JSON/REST --> Frontend[React Vite UI :25001]
+    Frontend <-- WebSocket/REST --> Nginx[Nginx Reverse Proxy :25000]
+    Nginx --> Backend[FastAPI Orchestrator :25002]
     
-    subgraph AI_Cluster [AI High-Performance Cluster]
-        Backend --> Intent[Intent Classifier]
-        Intent -->|OCR Task| YOLO[YOLOv11 Detection]
-        YOLO -->|Crops| Qwen[Qwen2.5-VL Recognition]
-        
-        Backend -->|Query| RAG[Agentic RAG Service]
-        RAG -->|Semantic Search| Milvus[(Milvus Vector DB)]
-        RAG -->|Personal Context| Postgres[(PostgreSQL - Profiles)]
+    subgraph GPU_Cluster [GPU Acceleration Cluster - RTX 5060 Ti]
+        Ollama[Ollama GPU Server]
+        Ollama --> Nomic[nomic-embed-text - Embeddings]
+        Ollama --> Qwen[qwen2.5:1.5b - Chat AI]
+        Ollama --> Llama[llama3.2-vision - OCR]
     end
     
-    subgraph Storage_Layer [Storage & Data Lake]
+    subgraph AI_Pipeline [AI Processing Pipeline]
+        Backend --> RAG[RAG Engine]
+        RAG -->|Embedding Query| Ollama
+        RAG -->|Semantic Search| Milvus[(Milvus Vector DB\n154,481 vectors)]
+        RAG -->|Generate Answer| Ollama
+        
+        Backend --> OCR[OCR Service]
+        OCR -->|Image → Text| Ollama
+    end
+    
+    subgraph Storage_Layer [Storage & Data Lake - /home 1.2TB]
+        Backend <--> Postgres[(PostgreSQL - Profiles)]
         Backend <--> MinIO[MinIO Object Storage]
-        Backend <--> Kafka[Apache Kafka - Event Streaming]
+        Backend <--> Kafka[Apache Kafka]
+        Backend <--> Redis[Redis Cache]
     end
 ```
 
@@ -37,80 +50,135 @@ graph TD
 
 ## 🛠️ Hệ thống Công nghệ & Hạ tầng (Infrastructure Stack)
 
-Dự án sử dụng các công nghệ tiên tiến nhất để đảm bảo hiệu suất đào tạo và tốc độ phản hồi tính bằng mili giây.
+### 1. AI Models (Local GPU - Ollama)
+| Model | Kích thước | Chức năng | GPU VRAM |
+|---|---|---|---|
+| `nomic-embed-text` | 274 MB | Tạo vector embeddings (768d) | ~500 MB |
+| `qwen2.5:1.5b` | 986 MB | Chat AI / RAG trả lời câu hỏi | ~1.5 GB |
+| `llama3.2-vision` | 7.8 GB | OCR bóc tách chữ Hán Nôm từ ảnh | ~5 GB |
 
-### 1. Frontend: Scholar & Client Experience
+### 2. Vector Database (Milvus)
+| Thông số | Giá trị |
+|---|---|
+| **Collection** | `heritage_knowledge` |
+| **Tổng vectors** | 154,481 |
+| **Dimension** | 768 (float32) |
+| **Nguồn dữ liệu** | Thiều Chửu (8,085) + Trung-Việt (122,596) + Unihan (27,768) |
+| **Tốc độ search** | ~1-2ms trên 154K vectors |
+
+### 3. Frontend: Scholar & Client Experience
 - **Logic:** React 18 (Hooks, Context API) + Vite.
 - **UI/UX:** 
     - **Vanilla CSS:** Hệ thống Design System tùy chỉnh, tối ưu hóa CSS Variables cho Dark/Light mode.
     - **Framer Motion:** Hiệu ứng chuyển cảnh (transitions) và micro-interactions mượt mà.
     - **Lucide-React:** Bộ thư viện icon phong cách scholarly.
-- **Performance:** Code-splitting và Lazy loading cho các module nghiên cứu nặng.
 
-### 2. Backend & MLOps: Agentic Orchestration
-- **FastAPI:** Hiệu suất cao với hỗ trợ Python AsyncIO, đảm bảo xử lý đồng thời hàng trăm yêu cầu RAG.
-- **LangChain & Agentic Workflow:** Điều phối các "Tool" của Agent, cho phép AI tự quyết định khi nào cần tra cứu ngữ nghĩa hoặc gọi mô hình nhận dạng.
+### 4. Backend & MLOps: Agentic Orchestration
+- **FastAPI:** Hiệu suất cao với hỗ trợ Python AsyncIO.
+- **LangChain & Ollama:** RAG Pipeline hoàn toàn nội bộ, không phụ thuộc Cloud API.
 - **Infrastructure:**
-    - **PostgreSQL (SQLAlchemy 2.0):** Quản lý hồ sơ người dùng đa tầng và lịch sử nghiên cứu.
-    - **MinIO:** Lưu trữ Object Storage cho hàng trăm GB ảnh scan độ phân giải cao.
-    - **Apache Kafka:** Hệ thống luồng sự kiện (Event Streaming) để điều phối các tác vụ nhận dạng hàng loạt.
-    - **Docker Ecosystem:** Container hóa toàn bộ stack, đảm bảo tính nhất quán từ Development đến Production.
+    - **PostgreSQL (SQLAlchemy 2.0):** Quản lý hồ sơ người dùng.
+    - **MinIO:** Object Storage cho ảnh scan.
+    - **Apache Kafka:** Event Streaming cho tác vụ nhận dạng hàng loạt.
+    - **Redis:** Cache để tối ưu tốc độ phản hồi.
+    - **Docker + NVIDIA Runtime:** GPU passthrough cho container AI.
 
-### 3. AI Core & Model Optimization
-- **Computer Vision:** YOLOv8n/v11n (Đã được tinh chỉnh trên 114k nhãn di sản để đạt độ chính xác >98% trong việc phát hiện cột chữ).
-- **Vision-Language Model:** Qwen 2.5-VL 3B (LoRA Fine-tuned). Hỗ trợ bóc tách văn bản Hán Nôm theo chiều dọc và hiểu ngữ cảnh văn hóa.
-- **Retriever Engine:** BAAI/BGE-M3 Embeddings + Milvus Vector Database (Cấu hình HNSW index cho tốc độ tìm kiếm O(log N)).
-- **Inference Optimization:** 
-    - **Quantization:** Sử dụng bitsandbytes cho 4-bit inference.
-    - **Hardware Acceleration:** TensorRT/ONNX Runtime tích hợp sâu trên NVIDIA RTX 5060 Ti.
-
----
-
-## 📂 Quy trình Bóc tách & Số hóa (The Pipeline)
-
-### Bước 1: Phát hiện & Phân vùng (YOLO Segmentation)
-Xác định tọa độ vùng văn bản cổ, lọc bỏ nhiễu từ hoa văn, dấu ấn hoặc các vết ố hư hại trên mộc bản.
-
-### Bước 2: Nhận dạng Đa phương thức (Qwen VLM)
-Mô hình Vision-Language được "dạy" cách đọc chữ Nôm theo phong cách thư pháp. Khác với OCR truyền thống, Qwen hiểu được cấu trúc "Biểu luận" của chữ Nôm để bóc tách chính xác ngay cả khi nét chữ bị mờ.
-
-### Bước 3: Đối soát RAG & Hiệu đính (Semantic Refinement)
-Kết quả thô được đưa vào **RAG Pipeline**:
-- Truy vấn Milvus để tìm âm Hán Việt chuẩn xác từ từ điển Thiều Chửu.
-- Sửa lỗi chính tả dựa trên ngữ cảnh lịch sử của tác phẩm.
-
-### Bước 4: Chuyển đổi & Lưu trữ (Delta Lake)
-Dữ liệu cuối cùng được lưu trữ dưới dạng Delta Lake, hỗ trợ truy vấn nhanh và theo dõi lịch sử chỉnh sửa của các học giả.
+### 5. Hardware Requirements
+| Thành phần | Yêu cầu tối thiểu | Khuyến nghị |
+|---|---|---|
+| **GPU** | NVIDIA GPU 8GB+ VRAM | RTX 5060 Ti 16GB |
+| **RAM** | 16 GB | 64 GB |
+| **Ổ cứng** | 100 GB SSD | 1TB+ NVMe |
+| **Docker** | Docker Engine + NVIDIA Container Toolkit | - |
 
 ---
 
-## 📂 Cấu trúc Thư mục (Granular Structure)
+## 🚀 Khởi chạy Nhanh (Quick Start)
+
+### 1. Clone & Cấu hình
+```bash
+git clone https://github.com/your-repo/Han_Nom_Model.git
+cd Han_Nom_Model
+cp .env.example .env
+# Chỉnh sửa .env nếu cần
+```
+
+### 2. Khởi chạy toàn bộ hệ thống
+```bash
+docker compose up -d
+```
+
+### 3. Tải AI Models
+```bash
+docker exec heritage_ollama ollama pull nomic-embed-text
+docker exec heritage_ollama ollama pull qwen2.5:1.5b
+docker exec heritage_ollama ollama pull llama3.2-vision
+```
+
+### 4. Nạp dữ liệu tri thức
+```bash
+docker exec heritage_backend python3 /scripts/seed_data.py
+```
+
+### 5. Truy cập
+| Dịch vụ | URL |
+|---|---|
+| **Frontend** | http://localhost:25001 |
+| **Backend API** | http://localhost:25002 |
+| **API Docs** | http://localhost:25002/docs |
+| **MinIO Console** | http://localhost:25006 |
+
+---
+
+## 📂 Cấu trúc Thư mục (Project Structure)
 
 ```text
 Han_Nom_Model/
 ├── backend/            
 │   ├── app/
 │   │   ├── api/          # Endpoints: /chat, /auth, /profile, /analytics
-│   │   ├── services/     # rag_engine.py, personal_agent.py, guardrails.py
-│   │   └── core/         # Middleware an ninh, config GPU/Cuda
-│   ├── worker/           # Background tasks xử lý Kafka/Redis
-│   └── scripts/          # Ingestion pipelines cho Milvus & MinIO
+│   │   ├── services/     # rag_engine.py, ocr_service.py, vector_ingest.py
+│   │   └── core/         # config.py (OLLAMA_BASE_URL, MILVUS settings)
+│   ├── scripts/          # seed_data.py, stress_test.py, integration_test.py
+│   └── Dockerfile
 ├── frontend/           
 │   ├── src/
 │   │   ├── views/        # Admin (Nghiên cứu) & Client (Khám phá)
 │   │   ├── components/   # common/ (AI Bubble, Navbar, Sidebar)
 │   │   └── assets/       # Heritage fonts & scholarly images
 │   └── index.css         # Hệ thống Design Tokens trung tâm
+├── data/                 # Từ điển CSV (Thiều Chửu, Trung-Việt, Unihan)
 ├── models/               # Model weights (.pt, .pth, checkpoints)
-├── data/                 # Raw/Processed dataset (17GB)
-└── deploy/               # Docker Compose & K8s manifests
+├── scripts/              # seed_data.py, upload_dataset.py
+├── docker-compose.yml    # 12 services (GPU-enabled)
+├── nginx.conf            # Reverse proxy configuration
+└── .env                  # Environment variables
 ```
 
 ---
 
-## 📜 Tài liệu Tham khảo
-- **Nguồn Dữ liệu chính:** [Cong123779/Han_Nom_Dataset](https://huggingface.co/datasets/Cong123779/Han_Nom_Dataset)
-- **Hạ tầng AI:** Qwen-VL, Milvus Vector DB, LangChain.
+## 📊 Docker Services Map
+
+| Container | Image | Port | Chức năng |
+|---|---|---|---|
+| `heritage_backend` | Custom (FastAPI) | 25002 | API Server |
+| `heritage_frontend` | Custom (React) | 25001 | Web UI |
+| `heritage_ollama` | ollama/ollama | - | GPU AI Engine |
+| `heritage_ai_worker` | Custom | - | Background AI Tasks |
+| `heritage_vector_db` | milvus:v2.4.0 | 25007 | Vector Database |
+| `heritage_db` | postgres:16 | 25003 | User Database |
+| `heritage_cache` | redis:7 | 25004 | Cache Layer |
+| `heritage_storage` | minio | 25005-25006 | Object Storage |
+| `heritage_kafka` | cp-kafka:7.4.0 | 25008 | Event Streaming |
+| `heritage_proxy` | nginx:alpine | 25000 | Reverse Proxy |
 
 ---
-*Bảo tồn quá khứ - Kiến tạo tương lai bằng Trí tuệ Nhân tạo.*
+
+## 📜 Tài liệu Tham khảo
+- **Nguồn Dữ liệu:** [Cong123779/Han_Nom_Dataset](https://huggingface.co/datasets/Cong123779/Han_Nom_Dataset)
+- **AI Engine:** [Ollama](https://ollama.com/) — Local GPU Inference
+- **Vector DB:** [Milvus](https://milvus.io/) — Scalable Vector Search
+- **Hạ tầng:** Docker + NVIDIA Container Toolkit
+
+---
+*Bảo tồn quá khứ — Kiến tạo tương lai bằng Trí tuệ Nhân tạo.*

@@ -16,9 +16,9 @@ async def init_db():
     try:
         async with engine.begin() as conn:
             # Import models here to ensure they are registered
-            # from app.db.postgres import models
-            # await conn.run_sync(Base.metadata.create_all)
-            pass
+            from app.db.postgres import models
+            await conn.run_sync(Base.metadata.create_all)
+            print("[*] Postgres tables initialized successfully")
     except Exception:
         # Allow local/dev startup even when DB service is unavailable
         return

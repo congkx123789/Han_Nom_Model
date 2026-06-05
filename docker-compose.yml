@@ -54,7 +54,7 @@ services:
       - ETCD_AUTO_COMPACTION_MODE=revision
       - ETCD_AUTO_COMPACTION_RETENTION=1000
       - ETCD_QUOTA_BACKEND_BYTES=4294967296
-    command: etcd --advertise-client-urls http://127.0.0.1:2379 --listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    command: etcd --advertise-client-urls http://etcd:2379 --listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     volumes:
       - etcd_data:/etcd
 
@@ -83,10 +83,12 @@ services:
   backend:
     build: ./backend
     container_name: heritage_backend
-    env_file: .env.example
+    env_file: .env
     volumes:
       - ./backend:/app
-      - ./models:/models
+      - ./data:/app/data
+      - ./scripts:/scripts
+      - ./milvus_hannom.db:/app/milvus_hannom.db
     depends_on:
       - postgres
       - redis
@@ -94,6 +96,8 @@ services:
       - kafka
     ports:
       - "25002:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   ai-worker:
@@ -101,12 +105,28 @@ services:
       context: ./backend
       dockerfile: Dockerfile.ai
     container_name: heritage_ai_worker
+    runtime: nvidia
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - MINIO_ENDPOINT=minio:9000
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MILVUS_COLLECTION_NAME=heritage_knowledge
     depends_on:
       - kafka
       - milvus_standalone
+      - ollama
+    env_file: .env.example
+    volumes:
+      - ./backend:/app
+      - ./models:/models
+      - ./scripts:/scripts
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     restart: unless-stopped
 
   frontend:
@@ -131,9 +151,37 @@ services:
     depends_on:
       - backend
       - frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: heritage_ollama
+    runtime: nvidia
+    volumes:
+      - ollama_storage:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: heritage_tunnel
+    restart: unless-stopped
+    network_mode: host
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
 
 volumes:
   postgres_data:
   minio_data:
   etcd_data:
+  milvus_data:
+  ollama_storage:

@@ -56,7 +56,8 @@ const ChatAssistant = () => {
 
     try {
       // Connect specifically to our newly created FastAPI Chat route
-      const res = await fetch('http://localhost:8000/api/v1/chat/', {
+      // Using relative URL to work with Nginx Proxy
+      const res = await fetch('/api/v1/chat/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

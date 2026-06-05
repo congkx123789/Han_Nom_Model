@@ -2,7 +2,8 @@ import json
 import asyncio
 from aiokafka import AIOKafkaConsumer
 from app.core.config import settings
-from app.services import ocr_pipeline # Assume we move the ML logic here
+from app.services.ocr_service import start_ocr_process
+from app.services.vector_ingest import ingest_service
 
 async def ocr_worker():
     consumer = AIOKafkaConsumer(
@@ -19,10 +20,10 @@ async def ocr_worker():
             
             print(f"[*] Processing OCR Job: {job_id}")
             # 1. Trigger ML Pipeline (YOLO + Qwen)
-            result = await ocr_pipeline.run_inference(file_url, job_id)
+            # This is a sync subprocess, run in thread to avoid blocking loop
+            result = await asyncio.to_thread(start_ocr_process, file_url, job_id)
             
             # 2. Ingest into Vector DB for RAG
-            from app.services.vector_ingest import ingest_service
             await ingest_service.ingest_document(
                 job_id=job_id, 
                 text_content=result.get("text", ""),
@@ -33,3 +34,7 @@ async def ocr_worker():
             
     finally:
         await consumer.stop()
+
+if __name__ == "__main__":
+    print("📢 AI Worker is starting... Listening for Kafka messages.")
+    asyncio.run(ocr_worker())
